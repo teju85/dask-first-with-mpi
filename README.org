@@ -1,0 +1,27 @@
+* Introduction
+This is a testing ground for "dask-first" approach being discussed [[https://github.com/dask/dask-mpi/issues/25#issuecomment-469546424][here]].
+* Pre-reqs
+- python (v3.7.1)
+  - dask
+  - distributed
+  - cython
+- gcc (v5.4.0)
+- openmpi (3.1.3)
+Versions for the above dependencies were mentioned here because those were the
+ones used to test the code here!
+* Usage
+** Hello World!
+A simple hello world program that runs out-of-band tasks on the launched dask
+workers.
+#+BEGIN_SRC bash
+env PYTHONPATH=modules python ./launch.py -module hello
+#+END_SRC
+** Singleton MPI - hello world
+Hello world singleton MPI where dask worker processes behave like MPI processes
+before going back to the dask world.
+#+BEGIN_SRC bash
+cd modules/hello-mpi
+python setup.py install --user
+cd ../..
+python ./launch.py -module hello_mpi
+#+END_SRC

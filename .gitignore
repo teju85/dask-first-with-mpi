@@ -1,0 +1,7 @@
+*.pyc
+build
+hello_mpi.cpp
+__pycache__
+global.lock
+purge.lock
+worker-*
