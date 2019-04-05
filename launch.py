@@ -2,6 +2,7 @@ import subprocess as subp
 import time
 import argparse
 from dask.distributed import Client
+import os
 
 
 class DaskEnv:
@@ -31,9 +32,27 @@ class DaskEnv:
                                            "%d" % args.bokehPort,
                                            "--name", "%d" % i])
             self.workers.append(proc)
+        if args.mpi:
+            print("Launching ompi-server...")
+            self.mpiServer = self.__runInBackground(["ompi-server",
+                                                     "--no-daemonize",
+                                                     "-r", "ompi.server.uri"])
+            time.sleep(DaskEnv.SleepTime)
+            with open("ompi.server.uri", "r") as fp:
+                self.mpiServerUri = fp.read().rstrip()
+            print("ompi-server URI = %s" % self.mpiServerUri)
+        else:
+            self.mpiServer = None
+            self.mpiServerUri = None
         time.sleep(DaskEnv.SleepTime)
 
     def __del__(self):
+        # kill the ompi-server, if launched
+        if self.mpiServer is not None:
+            print("Cleaning up the ompi-server...")
+            time.sleep(DaskEnv.SleepTime)
+            self.mpiServer.kill()
+            os.remove("ompi.server.uri")
         # delete workers first, followed by scheduler!
         print("Cleaning up workers and scheduler...")
         time.sleep(DaskEnv.SleepTime)
@@ -61,6 +80,8 @@ def main():
                         help="Port for the dask-scheduler")
     parser.add_argument("-module", default=None, type=str,
                         help="Name of the dask-aware module to be executed")
+    parser.add_argument("-mpi", default=False, action='store_true',
+                        help="Whether this is an MPI run or not")
     args = parser.parse_args()
     if not args.module:
         raise Exception("'-module' is mandatory!")
@@ -68,7 +89,7 @@ def main():
     module = __import__(args.module)
     ipAddr = "%s:%d" % (args.schedIp, args.schedPort)
     client = Client(ipAddr)
-    client.run(module.run, args.nWorkers)
+    client.run(module.run, args.nWorkers, de.mpiServerUri)
 
 
 if __name__ == "__main__":

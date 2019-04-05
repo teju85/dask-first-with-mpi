@@ -10,18 +10,13 @@ This is a testing ground for "dask-first" approach being discussed [[https://git
 Versions for the above dependencies were mentioned here because those were the
 ones used to test the code here!
 * Usage
-** Hello World!
-A simple hello world program that runs out-of-band tasks on the launched dask
-workers.
-#+BEGIN_SRC bash
-env PYTHONPATH=modules python ./launch.py -module hello
-#+END_SRC
-** Singleton MPI - hello world
+** Singleton MPI
 Hello world singleton MPI where dask worker processes behave like MPI processes
-before going back to the dask world.
+before going back to the dask world. Not that this uses the out-of-band function
+launch feature of dask.
 #+BEGIN_SRC bash
-cd modules/hello-mpi
+cd hello-mpi
 python setup.py install --user
-cd ../..
-python ./launch.py -module hello_mpi
+cd ..
+python ./launch.py -module hello_mpi -nWorkers 2 -mpi
 #+END_SRC

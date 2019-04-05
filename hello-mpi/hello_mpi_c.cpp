@@ -38,22 +38,17 @@ public:
      * @param wid worker Id as received from dask world. It thus expects that
      * the dask-workers have been created with some way of identifying their IDs!
      * @param num number of workers
-     * @param base base port from where to start MPI_Open_port
-     * @param host current host name where to start MPI_Open_port
      */
-    MpiWorldBuilder(int wid, int num, int base, const std::string& host="localhost"):
-        workerId(wid), nWorkers(num), basePort(base), hostName(host), portName() {
-        openPort();
-        getPort();
-        connectToClients();
-        connectToServer();
+    MpiWorldBuilder(int wid, int num):
+        workerId(wid), nWorkers(num), portName() {
+        workerId == 0? openPort() : getPort();
+        workerId == 0? connectToClients() : connectToServer();
     }
 
     /** dtor */
     ~MpiWorldBuilder() {
         if(workerId == 0) {
             printf("worker=%d: server closing port\n", workerId);
-            remove("server.port");
             COMM_CHECK(MPI_Close_port(portName.c_str()));
         }
     }
@@ -63,10 +58,6 @@ private:
     int workerId;
     /** number of workers */
     int nWorkers;
-    /** base port */
-    int basePort;
-    /** current host name on which to perform MPI_Open_port */
-    std::string hostName;
     /** port name returned by MPI_Open_port */
     std::string portName;
     /** comm handle for all the connected processes so far */
@@ -75,34 +66,26 @@ private:
     MPI_Comm intercomm;
 
     void openPort() {
-        if(workerId != 0) return;
         char _portName[MPI_MAX_PORT_NAME];
         ///@todo: clean up this text-file based communication hack. It is dirty!
         COMM_CHECK(MPI_Open_port(MPI_INFO_NULL, _portName));
         portName = _portName;
         printf("worker=%d port opened on %s\n", workerId, portName.c_str());
-        FILE *fp = fopen("server.port", "w");
-        fprintf(fp, "%s", portName.c_str());
-        fclose(fp);
+        COMM_CHECK(MPI_Publish_name("server", MPI_INFO_NULL, _portName));
     }
 
     void getPort() {
-        if(workerId == 0) return;
         char _portName[MPI_MAX_PORT_NAME];
-        ///@todo: clean up this text-file based communication hack. It is dirty!
-        FILE* fp;
-        while((fp = fopen("server.port", "r")) == NULL)
-            sleep(1);
-        fscanf(fp, "%s", _portName);
-        fclose(fp);
+        COMM_CHECK(MPI_Lookup_name("server", MPI_INFO_NULL, _portName));
         portName = _portName;
         printf("worker=%d server port obtained to be %s\n", workerId,
                portName.c_str());
     }
 
     void connectToClients() {
-        if(workerId != 0) return;
         for(int i=1;i<nWorkers;++i) {
+            printf("worker=%d: server: trying to connect to client=%d\n",
+                   workerId, i);
             COMM_CHECK(MPI_Comm_accept(portName.c_str(), MPI_INFO_NULL, 0,
                                        i == 1? MPI_COMM_WORLD : intracomm,
                                        &intercomm));
@@ -118,7 +101,8 @@ private:
     }
 
     void connectToServer() {
-        if(workerId == 0) return;
+        printf("worker=%d: client: trying to connect to server %s\n",
+               workerId, portName.c_str());
         COMM_CHECK(MPI_Comm_connect(portName.c_str(), MPI_INFO_NULL, 0,
                                     MPI_COMM_WORLD, &intercomm));
         printf("worker=%d: client: connected to server\n", workerId);
@@ -132,14 +116,14 @@ private:
 };
 
 
-void mpi_run(int workerId, int nWorkers, int basePort) {
+void mpi_run(int workerId, int nWorkers) {
     int rank, nranks;
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
     printf("Hello from rank=%d/%d worker=%d/%d\n", rank, nranks, workerId, nWorkers);
     {
-        MpiWorldBuilder builder(workerId, nWorkers, basePort);
+        MpiWorldBuilder builder(workerId, nWorkers);
         sleep(5);
     }
     printf("Bye from rank=%d/%d worker=%d\n", rank, nranks, workerId);
