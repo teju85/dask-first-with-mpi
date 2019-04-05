@@ -49,7 +49,6 @@ class DaskEnv:
         return proc
 
 
-# TODO: support passing args to the worker module!
 def main():
     parser = argparse.ArgumentParser(description="Dask launcher script")
     parser.add_argument("-bokehPort", default=8888, type=int,
@@ -62,8 +61,6 @@ def main():
                         help="Port for the dask-scheduler")
     parser.add_argument("-module", default=None, type=str,
                         help="Name of the dask-aware module to be executed")
-    parser.add_argument("-args", default=[], action="append", type=str,
-                        help="List of args for the module to be called with")
     args = parser.parse_args()
     if not args.module:
         raise Exception("'-module' is mandatory!")
@@ -71,7 +68,7 @@ def main():
     module = __import__(args.module)
     ipAddr = "%s:%d" % (args.schedIp, args.schedPort)
     client = Client(ipAddr)
-    client.run(module.run)
+    client.run(module.run, args.nWorkers)
 
 
 if __name__ == "__main__":
