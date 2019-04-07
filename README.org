@@ -6,7 +6,11 @@ This is a testing ground for "dask-first" approach being discussed [[https://git
   - distributed
   - cython
 - gcc (v5.4.0)
-- openmpi (3.1.3)
+- openmpi (directly from the repo!)
+  - there's an issue in ompi with accept/connect calls and singleton processes
+  - this was fixed in this PR: https://github.com/open-mpi/ompi/issues/3458
+  - however, this fix is not part of the releases
+  - so, one has to build openmpi directly from the bleeding-edge branch of it!
 Versions for the above dependencies were mentioned here because those were the
 ones used to test the code here!
 * Usage
