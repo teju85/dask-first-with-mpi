@@ -49,7 +49,7 @@ public:
     ~MpiWorldBuilder() {
         if(workerId == 0) {
             printf("worker=%d: server closing port\n", workerId);
-            //COMM_CHECK(MPI_Close_port(portName.c_str()));
+            COMM_CHECK(MPI_Close_port(portName.c_str()));
         }
     }
 
@@ -74,7 +74,7 @@ private:
     }
 
     void getPort() {
-        sleep(1); // wait for the server to publish!
+        sleep(workerId); // wait for the server to publish!
         char _portName[MPI_MAX_PORT_NAME];
         COMM_CHECK(MPI_Lookup_name("server", MPI_INFO_NULL, _portName));
         portName = _portName;
@@ -91,7 +91,9 @@ private:
                                        &intercomm));
             printf("worker=%d: server: accepted connection from client=%d\n",
                    workerId, i);
+            printf("worker=%d: server: merging intercomm\n", workerId);
             COMM_CHECK(MPI_Intercomm_merge(intercomm, 0, &intracomm));
+            printf("worker=%d: server: intercomm merged\n", workerId);
             int rank, nranks;
             MPI_Comm_rank(intracomm, &rank);
             MPI_Comm_size(intracomm, &nranks);
@@ -106,7 +108,9 @@ private:
         COMM_CHECK(MPI_Comm_connect(portName.c_str(), MPI_INFO_NULL, 0,
                                     MPI_COMM_WORLD, &intercomm));
         printf("worker=%d: client: connected to server\n", workerId);
+        printf("worker=%d: client: merging intercomm\n", workerId);
         COMM_CHECK(MPI_Intercomm_merge(intercomm, 1, &intracomm));
+        printf("worker=%d: client: intercomm is now merged\n", workerId);
         int rank, nranks;
         MPI_Comm_rank(intracomm, &rank);
         MPI_Comm_size(intracomm, &nranks);
@@ -120,7 +124,9 @@ private:
                                        intracomm, &intercomm));
             printf("worker=%d: client: accepted connection from client=%d\n",
                    workerId, i);
+            printf("worker=%d: client: merging intercomm\n", workerId);
             COMM_CHECK(MPI_Intercomm_merge(intercomm, 0, &intracomm));
+            printf("worker=%d: client: intercomm is now merged\n", workerId);
             int rank, nranks;
             MPI_Comm_rank(intracomm, &rank);
             MPI_Comm_size(intracomm, &nranks);
