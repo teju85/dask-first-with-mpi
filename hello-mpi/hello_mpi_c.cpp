@@ -49,7 +49,7 @@ public:
     ~MpiWorldBuilder() {
         if(workerId == 0) {
             printf("worker=%d: server closing port\n", workerId);
-            COMM_CHECK(MPI_Close_port(portName.c_str()));
+            //COMM_CHECK(MPI_Close_port(portName.c_str()));
         }
     }
 
@@ -74,7 +74,7 @@ private:
     }
 
     void getPort() {
-        sleep(workerId); // wait for the server to publish!
+        sleep(1); // wait for the server to publish!
         char _portName[MPI_MAX_PORT_NAME];
         COMM_CHECK(MPI_Lookup_name("server", MPI_INFO_NULL, _portName));
         portName = _portName;
@@ -112,6 +112,21 @@ private:
         MPI_Comm_size(intracomm, &nranks);
         printf("worker=%d: client: after merging with server rank=%d/%d\n",
                workerId, rank, nranks);
+        // merge the other workers as well in the clients
+        for(int i=nranks;i<nWorkers;++i) {
+            printf("worker=%d: client: trying to accept for client=%d\n",
+                   workerId, i);
+            COMM_CHECK(MPI_Comm_accept(portName.c_str(), MPI_INFO_NULL, 0,
+                                       intracomm, &intercomm));
+            printf("worker=%d: client: accepted connection from client=%d\n",
+                   workerId, i);
+            COMM_CHECK(MPI_Intercomm_merge(intercomm, 0, &intracomm));
+            int rank, nranks;
+            MPI_Comm_rank(intracomm, &rank);
+            MPI_Comm_size(intracomm, &nranks);
+            printf("worker=%d: client: after merging from client=%d rank=%d/%d\n",
+                   workerId, i, rank, nranks);
+        }
     }
 };
 
