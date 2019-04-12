@@ -67,7 +67,6 @@ private:
 
     void openPort() {
         char _portName[MPI_MAX_PORT_NAME];
-        ///@todo: clean up this text-file based communication hack. It is dirty!
         COMM_CHECK(MPI_Open_port(MPI_INFO_NULL, _portName));
         portName = _portName;
         printf("worker=%d port opened on %s\n", workerId, portName.c_str());
@@ -75,6 +74,7 @@ private:
     }
 
     void getPort() {
+        sleep(workerId); // wait for the server to publish!
         char _portName[MPI_MAX_PORT_NAME];
         COMM_CHECK(MPI_Lookup_name("server", MPI_INFO_NULL, _portName));
         portName = _portName;
